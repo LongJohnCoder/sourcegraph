@@ -26,7 +26,6 @@ export const createConvertJobProcessor = (
     ctx: TracingContext
 ): Promise<void> => {
     const { logger = createSilentLogger(), span } = addTags(ctx, { repository, commit, root })
-    const input = fs.createReadStream(filename)
     const tempFile = path.join(settings.STORAGE_ROOT, constants.TEMP_DIR, path.basename(filename))
 
     try {

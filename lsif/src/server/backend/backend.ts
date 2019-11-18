@@ -717,7 +717,7 @@ export class Backend {
         commit: string,
         file: string,
         ctx: TracingContext = {}
-    ): Promise<{ database: Database; dump: xrepoModels.LsifDump; ctx: TracingContext }> {
+    ): Promise<{ database: Database; dump: xrepoModels.LsifDump; ctx: TracingContext } | undefined> {
         // Determine the closest commit that we actually have LSIF data for. If the commit is
         // not tracked, then commit data is requested from gitserver and insert the ancestors
         // data for this commit.
@@ -737,11 +737,7 @@ export class Backend {
                 dbFilename(this.storageRoot, dump.id, dump.repository, dump.commit)
             )
 
-            return {
-                database,
-                dump,
-                ctx: addTags(ctx, { closestCommit: dump.commit }),
-            }
+            return { database, dump, ctx: addTags(ctx, { closestCommit: dump.commit }) }
         }
 
         return undefined

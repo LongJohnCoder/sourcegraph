@@ -155,13 +155,15 @@ func (r *Runner) Run(ctx context.Context, plan *a8n.CampaignPlan) error {
 		go worker(queue)
 	}
 
-	for _, job := range jobs {
-		r.wg.Add(1)
-		queue <- job
-	}
+	r.wg.Add(len(jobs))
 
-	r.wg.Wait()
-	close(queue)
+	go func() {
+		for _, job := range jobs {
+			queue <- job
+		}
+
+		close(queue)
+	}()
 
 	return nil
 }
@@ -169,8 +171,12 @@ func (r *Runner) Run(ctx context.Context, plan *a8n.CampaignPlan) error {
 func (r *Runner) runJob(ctx context.Context, job *a8n.CampaignJob) {
 	defer func() {
 		defer r.wg.Done()
+
 		job.FinishedAt = r.clock()
-		err := r.store.UpdateCampaignJob(ctx, job)
+
+		// We're passing a new context here because we want to persist the job
+		// even if we ran into a timeout earlier.
+		err := r.store.UpdateCampaignJob(context.Background(), job)
 		if err != nil {
 			log15.Error("UpdateCampaignJob failed", "err", err)
 		}

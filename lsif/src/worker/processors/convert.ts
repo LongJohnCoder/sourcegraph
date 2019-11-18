@@ -31,7 +31,7 @@ export const createConvertJobProcessor = (
 
     try {
         // Create database in a temp path
-        const { packages, references } = await convertLsif(input, tempFile, { logger, span })
+        const { packages, references } = await convertLsif(filename, tempFile, { logger, span })
 
         // Insert dump and add packages and references to the xrepo db
         const dump = await xrepoDatabase.addPackagesAndReferences(

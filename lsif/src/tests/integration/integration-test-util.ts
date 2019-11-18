@@ -145,12 +145,10 @@ export async function convertTestData(
 ): Promise<void> {
     // Create a filesystem read stream for the given test file. This will cover
     // the cases where `yarn test` is run from the root or from the lsif directory.
-    const input = fs.createReadStream(
-        path.join((await fs.exists('lsif')) ? 'lsif' : '', 'src/tests/integration/data', filename)
-    )
+    const fullFilename = path.join((await fs.exists('lsif')) ? 'lsif' : '', 'src/tests/integration/data', filename)
 
     const tmp = path.join(storageRoot, constants.TEMP_DIR, uuid.v4())
-    const { packages, references } = await convertLsif(input, tmp)
+    const { packages, references } = await convertLsif(fullFilename, tmp)
     const dump = await xrepoDatabase.addPackagesAndReferences(
         repository,
         commit,
@@ -275,6 +273,7 @@ export function createLocation(
  * Create an LSP location with a remote URI.
  *
  * @param repository The repository name.
+ * @param commit The commit.
  * @param documentPath The document path.
  * @param startLine The starting line.
  * @param startCharacter The starting character.
@@ -283,6 +282,7 @@ export function createLocation(
  */
 export function createRemoteLocation(
     repository: string,
+    commit: string,
     documentPath: string,
     startLine: number,
     startCharacter: number,
@@ -290,18 +290,26 @@ export function createRemoteLocation(
     endCharacter: number
 ): lsp.Location {
     const url = new URL(`git://${repository}`)
-    url.search = createCommit(0)
+    url.search = commit
     url.hash = documentPath
 
     return createLocation(url.href, startLine, startCharacter, endLine, endCharacter)
 }
 
+/** A counter used for unique commit generation. */
+let commitBase = 0
+
 /**
- * Create a 40-character commit by repeating the given string.
+ * Create a 40-character commit.
  *
  * @param base A unique numeric base to repeat.
  */
-export function createCommit(base: number): string {
+export function createCommit(base?: number): string {
+    if (base === undefined) {
+        base = commitBase
+        commitBase++
+    }
+
     // Add 'a' to differentiate between similar numeric bases such as `1a1a...` and `11a11a...`.
     return (base + 'a').repeat(40).substring(0, 40)
 }

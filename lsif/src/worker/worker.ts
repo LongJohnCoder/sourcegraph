@@ -53,7 +53,8 @@ const wrapJobProcessor = <T>(
         metrics.jobDurationHistogram,
         metrics.jobDurationErrorsCounter,
         { class: type },
-        (): Promise<void> => logAndTraceCall(ctx, `Running ${type} job`, (ctx: TracingContext) => jobProcessor(job, args, ctx))
+        (): Promise<void> =>
+            logAndTraceCall(ctx, `Running ${type} job`, (ctx: TracingContext) => jobProcessor(job, args, ctx))
     )
 }
 

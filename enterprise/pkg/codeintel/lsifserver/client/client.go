@@ -32,7 +32,7 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
-// traceRequestAndUnmarshalPayload builds a URL, performs a request, and populates
+// TraceRequestAndUnmarshalPayload builds a URL, performs a request, and populates
 // the given payload with the response body. This is a convenience wrapper around
 // BuildURL, TraceRequest, and UnmarshalPayload.
 func (c *Client) TraceRequestAndUnmarshalPayload(ctx context.Context, method, path string, query url.Values, body io.ReadCloser, payload interface{}) error {
@@ -44,7 +44,7 @@ func (c *Client) TraceRequestAndUnmarshalPayload(ctx context.Context, method, pa
 	return UnmarshalPayload(resp, &payload)
 }
 
-// buildAndTraceRequest builds a URL and performs a request. This is a convenience wrapper
+// BuildAndTraceRequest builds a URL and performs a request. This is a convenience wrapper
 // around BuildURL and TraceRequest.
 func (c *Client) BuildAndTraceRequest(ctx context.Context, method, path string, query url.Values, body io.ReadCloser) (*http.Response, error) {
 	url, err := buildURL(c.URL, path, query)
@@ -108,6 +108,32 @@ func (c *Client) do(ctx context.Context, method, url string, body io.ReadCloser)
 	return
 }
 
+// UnmarshalPayload reads (and closes) the given response body and populates
+// the given payload with the JSON response.
+func UnmarshalPayload(resp *http.Response, payload interface{}) error {
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal([]byte(body), &payload)
+}
+
+// ExtractNextURL retrieves the URL with rel="next" in the given response's Link
+// header. If the link header is empty or has no rel="next", this method returns an
+// empty string.
+func ExtractNextURL(resp *http.Response) string {
+	for _, link := range linkheader.Parse(resp.Header.Get("Link")) {
+		if link.Rel == "next" {
+			return link.URL
+		}
+	}
+
+	return ""
+}
+
 // buildURL constructs a URL to the backend LSIF server with the given path
 // and query values. If path is relative (indicated by a leading slash), then
 // the configured LSIF server url is prepended. Otherwise, it is treated as
@@ -143,32 +169,6 @@ func buildURL(baseURL, path string, query url.Values) (string, error) {
 	u.RawQuery = q.Encode()
 
 	return u.String(), nil
-}
-
-// unmarshalPayload reads (and closes) the given response body and populates
-// the given payload with the JSON response.
-func UnmarshalPayload(resp *http.Response, payload interface{}) error {
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return json.Unmarshal([]byte(body), &payload)
-}
-
-// extractNextURL retrieves the URL with rel="next" in the given response's Link
-// header. If the link header is empty or has no rel="next", this method returns an
-// empty string.
-func ExtractNextURL(resp *http.Response) string {
-	for _, link := range linkheader.Parse(resp.Header.Get("Link")) {
-		if link.Rel == "next" {
-			return link.URL
-		}
-	}
-
-	return ""
 }
 
 type lsifError struct {
